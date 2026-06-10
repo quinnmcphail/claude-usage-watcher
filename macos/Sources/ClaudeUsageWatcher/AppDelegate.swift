@@ -173,13 +173,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     private func startTimers() {
         let poll = Timer(timeInterval: pollInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.poll() }
+            guard let self else { return }
+            Task { @MainActor in self.poll() }
         }
         RunLoop.main.add(poll, forMode: .common)
         pollTimer = poll
 
         let tick = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.renderFromCache() }
+            guard let self else { return }
+            Task { @MainActor in self.renderFromCache() }
         }
         RunLoop.main.add(tick, forMode: .common)
         tickTimer = tick
