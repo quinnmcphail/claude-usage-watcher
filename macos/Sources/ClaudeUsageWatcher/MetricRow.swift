@@ -26,6 +26,7 @@ final class MetricRow: NSStackView {
 
         let spacer = NSView()
         spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.heightAnchor.constraint(equalToConstant: 0).isActive = true
         let header = NSStackView(views: [titleLabel, spacer, percentLabel])
         header.orientation = .horizontal
         header.translatesAutoresizingMaskIntoConstraints = false

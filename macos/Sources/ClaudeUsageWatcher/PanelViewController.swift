@@ -46,6 +46,8 @@ final class PanelViewController: NSViewController {
         expandButton.setContentHuggingPriority(.required, for: .horizontal)
 
         let spacer = NSView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.heightAnchor.constraint(equalToConstant: 0).isActive = true
         let titleRow = NSStackView(views: [titleLabel, spacer, expandButton])
         titleRow.orientation = .horizontal
         titleRow.distribution = .fill
@@ -64,15 +66,16 @@ final class PanelViewController: NSViewController {
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.setHuggingPriority(.required, for: .vertical)
 
+        // The optional rows (opus/sonnet/noPerModel) are inserted and removed in
+        // render(): hiding arranged views in place doesn't release their space,
+        // because the row-to-stack width constraints below block NSStackView's
+        // hidden-view detaching, and the panel renders with large gaps.
         stack.addArrangedSubview(titleRow)
         stack.addArrangedSubview(fiveRow)
         stack.addArrangedSubview(weekRow)
-        stack.addArrangedSubview(opusRow)
-        stack.addArrangedSubview(sonnetRow)
-        stack.addArrangedSubview(noPerModel)
         stack.addArrangedSubview(statusLabel)
 
-        for row in [titleRow, fiveRow, weekRow, opusRow, sonnetRow] {
+        for row in [titleRow, fiveRow, weekRow] {
             row.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
 
@@ -86,6 +89,17 @@ final class PanelViewController: NSViewController {
         ])
 
         view = container
+        updatePreferredSize()
+    }
+
+    /// The popover sizes itself from preferredContentSize; recompute it whenever
+    /// content changes so the panel hugs its rows instead of stretching them.
+    /// Measured from the stack, not the container: setting preferredContentSize
+    /// installs a height constraint on the container, so its fittingSize can
+    /// never shrink back once grown.
+    private func updatePreferredSize() {
+        view.layoutSubtreeIfNeeded()
+        preferredContentSize = NSSize(width: 300, height: stack.fittingSize.height + 24)
     }
 
     @objc private func toggleExpand() {
@@ -107,14 +121,39 @@ final class PanelViewController: NSViewController {
         let expanded = settings().expanded
         let opusAvailable = snap?.sevenDayOpus != nil
         let sonnetAvailable = snap?.sevenDaySonnet != nil
-        opusRow.isHidden = !(expanded && opusAvailable)
-        sonnetRow.isHidden = !(expanded && sonnetAvailable)
-        noPerModel.isHidden = !(expanded && !opusAvailable && !sonnetAvailable)
+        syncOptionalRows(
+            showOpus: expanded && opusAvailable,
+            showSonnet: expanded && sonnetAvailable,
+            showNoPerModel: expanded && !opusAvailable && !sonnetAvailable)
 
         statusLabel.stringValue = buildStatus(service: service, lastOutcome: lastOutcome, snap: snap)
         statusLabel.textColor = (!service.hasCredentials || service.isStale) ? Theme.amber : Theme.gray
 
-        view.window?.layoutIfNeeded()
+        updatePreferredSize()
+    }
+
+    /// Inserts/removes the per-model rows above the status line. No-op when the
+    /// desired membership already matches, so the 1s render tick causes no churn.
+    private func syncOptionalRows(showOpus: Bool, showSonnet: Bool, showNoPerModel: Bool) {
+        let desired: [(NSView, Bool, Bool)] = [
+            (opusRow, showOpus, true),
+            (sonnetRow, showSonnet, true),
+            (noPerModel, showNoPerModel, false)
+        ]
+        guard desired.contains(where: { ($0.0.superview != nil) != $0.1 }) else { return }
+
+        // Rebuild in canonical order: opus, sonnet, noPerModel, all above the status line.
+        for (row, _, _) in desired where row.superview != nil {
+            stack.removeArrangedSubview(row)
+            row.removeFromSuperview()
+        }
+        for (row, show, needsWidth) in desired where show {
+            let index = stack.arrangedSubviews.firstIndex(of: statusLabel) ?? stack.arrangedSubviews.count
+            stack.insertArrangedSubview(row, at: index)
+            if needsWidth {
+                row.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+            }
+        }
     }
 
     private func caption(_ window: UsageWindow?, now: Date) -> String {
