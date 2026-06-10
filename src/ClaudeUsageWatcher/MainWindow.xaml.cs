@@ -22,7 +22,7 @@ public partial class MainWindow : Window
 
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(120);
 
-    private readonly UsageService _service = new();
+    private readonly UsageService _service;
     private readonly Settings _settings;
     private readonly DispatcherTimer _pollTimer;
     private readonly DispatcherTimer _tickTimer;
@@ -45,6 +45,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _settings = Settings.Load();
+        _service = new UsageService(_settings.NotifyWarnAt, _settings.NotifyCriticalAt);
 
         _pollTimer = new DispatcherTimer { Interval = PollInterval };
         _pollTimer.Tick += async (_, _) => await DoPollAsync();
@@ -55,10 +56,13 @@ public partial class MainWindow : Window
 
     public void InitializeAndShow()
     {
-        _trayIcon = new TrayIcon();
+        _trayIcon = new TrayIcon(_settings.NotificationsEnabled);
         _trayIcon.LeftClicked += ToggleVisibility;
         _trayIcon.RefreshRequested += () => _ = DoPollAsync();
         _trayIcon.ExitRequested += ExitApplication;
+        _trayIcon.NotificationsToggled += OnNotificationsToggled;
+
+        UpdateExpandButton();
 
         ApplyInitialPosition();
 
@@ -111,10 +115,48 @@ public partial class MainWindow : Window
             FetchResult result = await _service.PollAsync();
             _lastOutcome = result.Outcome;
             RenderFromCache();
+
+            if (result.Notification is ThresholdEvent ev && _settings.NotificationsEnabled)
+            {
+                ShowNotification(ev, result.Snapshot);
+            }
         }
         finally
         {
             _pollGate.Release();
+        }
+    }
+
+    private void ShowNotification(ThresholdEvent ev, UsageSnapshot? snap)
+    {
+        UsageWindow? five = snap?.FiveHour;
+        if (_trayIcon is null || five is null)
+        {
+            return;
+        }
+
+        int pct = (int)Math.Round(five.Utilization);
+        var now = DateTimeOffset.Now;
+
+        switch (ev)
+        {
+            case ThresholdEvent.Reset:
+                _trayIcon.ShowNotification(
+                    "Claude usage",
+                    $"5-hour window reset — usage at {pct}%",
+                    warning: false);
+                break;
+            case ThresholdEvent.Warning:
+            case ThresholdEvent.Critical:
+                string cd = UsageFormatting.FormatCountdown(five.ResetsAt, now);
+                string text = string.IsNullOrEmpty(cd)
+                    ? $"5-hour window at {pct}%"
+                    : $"5-hour window at {pct}% — resets in {cd}";
+                _trayIcon.ShowNotification(
+                    "Claude usage",
+                    text,
+                    warning: ev == ThresholdEvent.Critical);
+                break;
         }
     }
 
@@ -124,7 +166,12 @@ public partial class MainWindow : Window
         UsageSnapshot? snap = _service.LastGood;
 
         UpdateMetric(FiveBar, FivePercent, FiveReset, snap?.FiveHour, now);
+        ApplyBurnRateSuffix(snap?.FiveHour, now);
         UpdateMetric(WeekBar, WeekPercent, WeekReset, snap?.SevenDay, now);
+        UpdateMetric(OpusBar, OpusPercent, OpusReset, snap?.SevenDayOpus, now);
+        UpdateMetric(SonnetBar, SonnetPercent, SonnetReset, snap?.SevenDaySonnet, now);
+
+        UpdatePerModelVisibility(snap);
 
         StatusText.Text = BuildStatus(snap);
         StatusText.Foreground =
@@ -163,6 +210,75 @@ public partial class MainWindow : Window
         reset.Text = string.IsNullOrEmpty(cd) ? "" : $"resets in {cd}";
     }
 
+    private void ApplyBurnRateSuffix(UsageWindow? five, DateTimeOffset now)
+    {
+        if (five is null)
+        {
+            return;
+        }
+
+        TimeSpan? projection = _service.ProjectTimeToCap(now);
+        if (projection is not TimeSpan ttc)
+        {
+            return;
+        }
+
+        DateTimeOffset capInstant = now + ttc;
+
+        // Irrelevant if the window resets before the projected cap.
+        if (five.ResetsAt is DateTimeOffset resetsAt && capInstant >= resetsAt)
+        {
+            return;
+        }
+
+        string capCd = UsageFormatting.FormatCountdown(capInstant, now);
+        if (string.IsNullOrEmpty(capCd))
+        {
+            return;
+        }
+
+        FiveReset.Text = string.IsNullOrEmpty(FiveReset.Text)
+            ? $"≈caps in {capCd}"
+            : $"{FiveReset.Text} · ≈caps in {capCd}";
+    }
+
+    private void UpdatePerModelVisibility(UsageSnapshot? snap)
+    {
+        bool expanded = _settings.Expanded;
+        bool opusAvailable = snap?.SevenDayOpus is not null;
+        bool sonnetAvailable = snap?.SevenDaySonnet is not null;
+
+        OpusSection.Visibility = (expanded && opusAvailable)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        SonnetSection.Visibility = (expanded && sonnetAvailable)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        NoPerModelText.Visibility = (expanded && !opusAvailable && !sonnetAvailable)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void OnNotificationsToggled(bool enabled)
+    {
+        _settings.NotificationsEnabled = enabled;
+        _settings.Save();
+    }
+
+    private void ExpandButton_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.Expanded = !_settings.Expanded;
+        _settings.Save();
+        UpdateExpandButton();
+        RenderFromCache();
+    }
+
+    private void UpdateExpandButton()
+    {
+        ExpandButton.Content = _settings.Expanded ? "▾" : "▸";
+    }
+
     private string BuildStatus(UsageSnapshot? snap)
     {
         if (!_service.HasCredentials)
@@ -199,7 +315,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ShowFromTray()
+    public void ShowFromTray()
     {
         Show();
         _settings.Hidden = false;

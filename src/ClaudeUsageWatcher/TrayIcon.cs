@@ -15,6 +15,7 @@ public sealed class TrayIcon : IDisposable
 
     private readonly WinForms.NotifyIcon _notifyIcon;
     private readonly WinForms.ToolStripMenuItem _startWithWindowsItem;
+    private readonly WinForms.ToolStripMenuItem _notificationsItem;
 
     private Icon? _currentIcon;
     private IntPtr _currentIconHandle = IntPtr.Zero;
@@ -23,8 +24,9 @@ public sealed class TrayIcon : IDisposable
     public event Action? LeftClicked;
     public event Action? RefreshRequested;
     public event Action? ExitRequested;
+    public event Action<bool>? NotificationsToggled;
 
-    public TrayIcon()
+    public TrayIcon(bool notificationsEnabled)
     {
         _notifyIcon = new WinForms.NotifyIcon
         {
@@ -37,6 +39,13 @@ public sealed class TrayIcon : IDisposable
         var refreshItem = new WinForms.ToolStripMenuItem("Refresh now");
         refreshItem.Click += (_, _) => RefreshRequested?.Invoke();
 
+        _notificationsItem = new WinForms.ToolStripMenuItem("Notifications")
+        {
+            CheckOnClick = false,
+            Checked = notificationsEnabled
+        };
+        _notificationsItem.Click += OnToggleNotifications;
+
         _startWithWindowsItem = new WinForms.ToolStripMenuItem("Start with Windows")
         {
             CheckOnClick = false,
@@ -48,6 +57,7 @@ public sealed class TrayIcon : IDisposable
         exitItem.Click += (_, _) => ExitRequested?.Invoke();
 
         menu.Items.Add(refreshItem);
+        menu.Items.Add(_notificationsItem);
         menu.Items.Add(_startWithWindowsItem);
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add(exitItem);
@@ -65,6 +75,27 @@ public sealed class TrayIcon : IDisposable
         {
             LeftClicked?.Invoke();
         }
+    }
+
+    private void OnToggleNotifications(object? sender, EventArgs e)
+    {
+        bool enabled = !_notificationsItem.Checked;
+        _notificationsItem.Checked = enabled;
+        NotificationsToggled?.Invoke(enabled);
+    }
+
+    public void ShowNotification(string title, string text, bool warning)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _notifyIcon.ShowBalloonTip(
+            5000,
+            title,
+            text,
+            warning ? WinForms.ToolTipIcon.Warning : WinForms.ToolTipIcon.Info);
     }
 
     private void OnToggleAutostart(object? sender, EventArgs e)

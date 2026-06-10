@@ -44,6 +44,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
                            Text="Claude Usage"
@@ -52,6 +53,17 @@
                            Foreground="#DDDDDD"
                            VerticalAlignment="Center" />
                 <Button Grid.Column="1"
+                        x:Name="ExpandButton"
+                        Content="▸"
+                        Width="22" Height="22"
+                        Margin="0,0,4,0"
+                        Foreground="#DDDDDD"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        ToolTip="Show per-model usage"
+                        Click="ExpandButton_Click" />
+                <Button Grid.Column="2"
                         x:Name="HideButton"
                         Content="—"
                         Width="22" Height="22"
@@ -62,7 +74,7 @@
                         Cursor="Hand"
                         ToolTip="Hide to tray"
                         Click="HideButton_Click" />
-                <Button Grid.Column="2"
+                <Button Grid.Column="3"
                         x:Name="CloseButton"
                         Content="✕"
                         Width="22" Height="22"
@@ -107,6 +119,52 @@
                          BorderThickness="0"
                          Foreground="#2ECC71" />
             <TextBlock x:Name="WeekReset" Text="" Style="{StaticResource ResetText}" Margin="0,3,0,0" />
+
+            <!-- Weekly (Opus) row -->
+            <StackPanel x:Name="OpusSection" Visibility="Collapsed">
+                <Grid Margin="0,12,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Weekly (Opus)" Style="{StaticResource MetricLabel}" />
+                    <TextBlock Grid.Column="1" x:Name="OpusPercent" Text="--" Style="{StaticResource PercentText}" />
+                </Grid>
+                <ProgressBar x:Name="OpusBar"
+                             Height="10"
+                             Minimum="0" Maximum="100" Value="0"
+                             Background="#33000000"
+                             BorderThickness="0"
+                             Foreground="#2ECC71" />
+                <TextBlock x:Name="OpusReset" Text="" Style="{StaticResource ResetText}" Margin="0,3,0,0" />
+            </StackPanel>
+
+            <!-- Weekly (Sonnet) row -->
+            <StackPanel x:Name="SonnetSection" Visibility="Collapsed">
+                <Grid Margin="0,12,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Weekly (Sonnet)" Style="{StaticResource MetricLabel}" />
+                    <TextBlock Grid.Column="1" x:Name="SonnetPercent" Text="--" Style="{StaticResource PercentText}" />
+                </Grid>
+                <ProgressBar x:Name="SonnetBar"
+                             Height="10"
+                             Minimum="0" Maximum="100" Value="0"
+                             Background="#33000000"
+                             BorderThickness="0"
+                             Foreground="#2ECC71" />
+                <TextBlock x:Name="SonnetReset" Text="" Style="{StaticResource ResetText}" Margin="0,3,0,0" />
+            </StackPanel>
+
+            <!-- Shown when expanded but no per-model data is available -->
+            <TextBlock x:Name="NoPerModelText"
+                       Text="no per-model data"
+                       Visibility="Collapsed"
+                       FontSize="11"
+                       Foreground="#9A9AA8"
+                       Margin="0,12,0,0" />
 
             <!-- Status line -->
             <TextBlock x:Name="StatusText"

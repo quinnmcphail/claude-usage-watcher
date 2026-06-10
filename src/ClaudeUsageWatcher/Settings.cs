@@ -15,6 +15,18 @@ public sealed class Settings
     [JsonPropertyName("hidden")]
     public bool Hidden { get; set; }
 
+    [JsonPropertyName("expanded")]
+    public bool Expanded { get; set; }
+
+    [JsonPropertyName("notificationsEnabled")]
+    public bool NotificationsEnabled { get; set; } = true;
+
+    [JsonPropertyName("notifyWarnAt")]
+    public double NotifyWarnAt { get; set; } = 80;
+
+    [JsonPropertyName("notifyCriticalAt")]
+    public double NotifyCriticalAt { get; set; } = 95;
+
     private static readonly JsonSerializerOptions Options = new()
     {
         WriteIndented = true,
