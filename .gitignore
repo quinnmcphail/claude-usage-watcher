@@ -4,3 +4,9 @@ publish/
 *.user
 .claude/settings.local.json
 installer/Output/
+
+# Swift / macOS
+.build/
+macos/dist/
+.swiftpm/
+.DS_Store
