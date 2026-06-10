@@ -1,0 +1,119 @@
+<Window x:Class="ClaudeUsageWatcher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        SizeToContent="Height"
+        Width="300"
+        Title="Claude Usage">
+    <Window.Resources>
+        <Style x:Key="MetricLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#DDDDDD" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="PercentText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+        </Style>
+        <Style x:Key="ResetText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#9A9AA8" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+    </Window.Resources>
+
+    <Border x:Name="RootBorder"
+            CornerRadius="10"
+            Background="#EE1E1E28"
+            Padding="12"
+            MouseLeftButtonDown="RootBorder_MouseLeftButtonDown">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.5" Color="#000000" />
+        </Border.Effect>
+        <StackPanel>
+            <!-- Title row -->
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="Claude Usage"
+                           FontWeight="Bold"
+                           FontSize="14"
+                           Foreground="#DDDDDD"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        x:Name="HideButton"
+                        Content="—"
+                        Width="22" Height="22"
+                        Margin="0,0,4,0"
+                        Foreground="#DDDDDD"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        ToolTip="Hide to tray"
+                        Click="HideButton_Click" />
+                <Button Grid.Column="2"
+                        x:Name="CloseButton"
+                        Content="✕"
+                        Width="22" Height="22"
+                        Foreground="#DDDDDD"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        ToolTip="Hide to tray"
+                        Click="CloseButton_Click" />
+            </Grid>
+
+            <!-- 5-hour row -->
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="5-hour window" Style="{StaticResource MetricLabel}" />
+                <TextBlock Grid.Column="1" x:Name="FivePercent" Text="--" Style="{StaticResource PercentText}" />
+            </Grid>
+            <ProgressBar x:Name="FiveBar"
+                         Height="10"
+                         Minimum="0" Maximum="100" Value="0"
+                         Background="#33000000"
+                         BorderThickness="0"
+                         Foreground="#2ECC71" />
+            <TextBlock x:Name="FiveReset" Text="" Style="{StaticResource ResetText}" Margin="0,3,0,0" />
+
+            <!-- Weekly row -->
+            <Grid Margin="0,12,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Weekly" Style="{StaticResource MetricLabel}" />
+                <TextBlock Grid.Column="1" x:Name="WeekPercent" Text="--" Style="{StaticResource PercentText}" />
+            </Grid>
+            <ProgressBar x:Name="WeekBar"
+                         Height="10"
+                         Minimum="0" Maximum="100" Value="0"
+                         Background="#33000000"
+                         BorderThickness="0"
+                         Foreground="#2ECC71" />
+            <TextBlock x:Name="WeekReset" Text="" Style="{StaticResource ResetText}" Margin="0,3,0,0" />
+
+            <!-- Status line -->
+            <TextBlock x:Name="StatusText"
+                       Text=""
+                       FontSize="11"
+                       Foreground="#9A9AA8"
+                       Margin="0,12,0,0" />
+        </StackPanel>
+    </Border>
+</Window>

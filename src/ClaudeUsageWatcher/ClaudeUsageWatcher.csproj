@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>ClaudeUsageWatcher</RootNamespace>
+    <AssemblyName>ClaudeUsageWatcher</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- UseWindowsForms injects these as global usings; they collide with WPF's
+         Application/Color/etc. WinForms types are used only in TrayIcon.cs via
+         explicit usings, so drop the globals. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ClaudeUsageWatcher.Core\ClaudeUsageWatcher.Core.csproj" />
+  </ItemGroup>
+
+</Project>
